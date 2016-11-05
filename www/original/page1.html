@@ -1,0 +1,37 @@
+<ons-page>
+    <ons-toolbar>
+        <div class="center">モノクロ変換機能付きカメラ</div>
+    </ons-toolbar>
+    
+    <div id="container" class="horizontal", style="width:100%">
+      <div id="photo-canvas-container" style="width:70%">
+        <img id="photo" src="" />
+        <canvas id="my-canvas"></canvas>  
+      </div>
+      
+      <div>
+        <ons-row>
+          <ons-col align="right">
+            <ons-button id="shootButton" class="right-buttons">
+              <ons-icon icon="fa-camera-retro " size="20px" style="color: white"></ons-icon>
+              撮影と保存</ons-button>
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="right">
+            <ons-button id="showButton" class="right-buttons">
+              <ons-icon icon="fa-camera-retro " size="20px" style="color: white"></ons-icon>
+              表　示</ons-button>
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="right">
+            <ons-button id="changeToMonochrome" class="right-buttons">
+              <ons-icon icon="fa-camera-retro " size="20px" style="color: white"></ons-icon>
+              モノクロ変換</ons-button>
+          </ons-col>
+        </ons-row>
+      </div>
+    </div>
+    <div id="info" style="color:ccc; margin-top:100px">ここに情報を表示</div>
+</ons-page>

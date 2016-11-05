@@ -1,0 +1,17 @@
+.right-buttons {
+  width:160px;
+  margin: 10px;
+  text-align: center;
+  
+}
+
+/* boxレイアウトを使った横配置 */
+.horizontal {
+  display: -webkit-box;
+  -webkit-box-orient: horizontal;
+  /* 横方向センターに配置*/
+  -webkit-box-pack: center;
+}
+
+
+

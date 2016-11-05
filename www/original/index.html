@@ -1,0 +1,131 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <script src="components/loader.js"></script>
+    <link rel="stylesheet" href="components/loader.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        ons.bootstrap();
+        ons.disableAutoStatusBarFill();  // (Monaca enables StatusBar plugin by default)
+        
+        
+        
+        ons.ready(function(){
+          // カラー写真のイメージデータ用変数
+          var photoImage = null;
+          
+          $('#changeToMonochrome').on('click', function(){
+            // キャンバスのコンテキストの取得
+            var canvas = $('#my-canvas').get(0);
+            var context = canvas.getContext('2d');
+            // キャンバスの描画サーフェイスのサイズを設定
+            $("#my-canvas").attr("width",photoImage.width);
+            $("#my-canvas").attr("height",photoImage.height);
+            
+            // キャンバスに１度、カラー写真を描画する
+            context.drawImage(photoImage,0,0,photoImage.width, photoImage.height);
+            
+            // 写真のイメージデータを全部取得する
+            var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            // イメージのカラーピクセルの入った配列
+            var dataArray = imageData.data;
+            var len = dataArray.length;
+            
+            // 1ピクセルめのカラー  [ r1,g1,b1,a1,
+            // 2ピクセルめのカラー    r2, g,2, b2, a2,
+            // nピクセルめのカラー    rn, g2]
+            //[r,g,b,a,r,g,b,a,r,g,b,a]
+            
+            // Col.rgb = ( Col.r + Col.g + Col.b ) * 0.3333f;
+            
+            // カラー成分の平均を計算して、各成分を平均化する
+            
+            for (var i=0; i<len; i+=4){
+              var average = (dataArray[i] + dataArray[i+1] + dataArray[i+2]) * 0.3333;
+              dataArray[i]=average;
+              dataArray[i+1]=average;
+              dataArray[i+2]=average;
+            }
+            
+            /*
+            // ネガポジ変換
+            for (var i=0; i<len; i+=4){
+              dataArray[i]= -dataArray[i] + 255;
+              dataArray[i+1]= -dataArray[i+1] + 255;
+              dataArray[i+2]= -dataArray[i+2] + 255;
+            }
+            */
+            // イメージデータを戻す
+            context.putImageData(imageData, 0, 0);
+          });
+         
+          
+          $('#showButton').on('click', function(){
+            
+            var option ={
+              quality: 50,
+              sourceType : Camera.PictureSourceType.PHOTOLIBRARY,
+              destinationType: Camera.DestinationType.FILE_URI
+            };
+            
+            navigator.camera.getPicture(function(imageURI){
+             // console.log('取得成功');
+              // imageURIストリングを表示
+              console.log(imageURI);
+              $('#info').get(0).textContent = imageURI;
+            
+              // 画面の幅を調べる
+              var width = $('body').width();
+              // <img>のwidth属性を画面幅の1/3にする
+              var imageW = parseInt(width/3);
+              $('#photo').attr('width', imageW);
+          
+              // 写真を表示
+              $('#photo').attr('src', imageURI);
+              
+              // 後で使えるように変数で参照しておく
+              photoImage = $('#photo').get(0);
+              
+              // 写真のサイズはここで得られる
+              photoImage.onload=function(){
+                console.log("幅: "+photoImage.width + ' 高さ: ' +photoImage.height);
+                console.log(imageW);
+              }
+            }, onFail, option);
+          });
+          
+          // 写真を撮影して保存する
+          $('#shootButton').on('click', function(){
+            
+            // デバイスのカメラアプリを利用して撮影し保存
+            var options = {
+              sourceType : Camera.PictureSourceType.CAMERA,
+              saveToPhotoAlbum: true,
+              correctOrientation:true,
+              destinationType: Camera.DestinationType.FILE_URI 
+            };
+            
+            // カメラアプリを起動し、撮影して保存
+            navigator.camera.getPicture( function(imageURI){
+              console.log('成功');
+              $('#info').get(0).textContent = imageURI; 
+            }, onFail, options);
+          });
+          
+          // 画像の取得に失敗したら呼び出される
+          function onFail(message) {
+            console.log('失敗');
+            alert('理由: ' + message);
+          }
+          
+        });
+        
+    </script>
+</head>
+<body>
+    <ons-navigator title="Navigator" var="myNavigator" page="page1.html">
+    </ons-navigator> 
+</body>
+</html>
