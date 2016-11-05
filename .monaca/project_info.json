@@ -1,13 +1,15 @@
 {
     "plugins": [
-        "mobi.monaca.plugins.Monaca",
-        "org.apache.cordova.splashscreen",
-        "org.apache.cordova.statusbar",
-        "org.apache.cordova.camera"
+        "mobi.monaca.plugins.Monaca"
     ],
     "framework_version": "3.5",
     "xcode_version": "5",
-    "cordova_version": "3.5",
+    "cordova_version": "5.2",
     "plugin_settings": [],
-    "external_plugins": []
+    "external_plugins": [
+        "cordova-plugin-splashscreen@2.1.0",
+        "cordova-plugin-statusbar@1.0.1",
+        "cordova-plugin-camera@1.2.0",
+        "cordova-plugin-whitelist@1.0.0"
+    ]
 }

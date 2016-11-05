@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <script src="components/loader.js"></script>
+    <script type="text/javascript" src="./lib/fabric.js"></script>
+    <script type="text/javascript" src="./lib/potrace.js"></script>
     <link rel="stylesheet" href="components/loader.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
@@ -41,7 +43,7 @@
                 loading.show();
 
                 images = [];
-                var $img = $('<img>');
+                var $img = $('<img id="source">');
                 $img.attr('src', pictureUrl);
                 images.push({
                     element: $img,
@@ -49,14 +51,14 @@
                 });
                 
                 $img.one("load", function() {
-                  images.push({
-                      element: toMonochrome(this),
-                      label: 'グレースケール'
-                  });
-                  images.push({
-                      element: toInverse(this),
-                      label: 'ネガポジ変換'
-                  });
+//                  images.push({
+//                      element: toMonochrome(this),
+//                      label: 'グレースケール'
+//                  });
+//                  images.push({
+//                      element: toInverse(this),
+//                      label: 'ネガポジ変換'
+//                  });
                   loading.hide();
                   myNavi.pushPage('image.html');
                 });
@@ -84,6 +86,168 @@
             setTimeout(function() {
                 imageCarousel.refresh();
             }, 100);
+            
+            //start
+            var isFF = /firefox/i.test(navigator.userAgent);
+        	if(isFF){
+        		document.querySelector("#view").addEventListener("contextmenu", function(e){
+        			e.preventDefault();
+        			e.stopPropagation();
+        		});
+        	}
+        	//svg source to downloadable url string.
+        	{
+        		let current = "";
+        		var toURL = function(svgsrc){
+        			var blob = new Blob([svgsrc], {type: "image/svg+xml"});
+        			bytes.value = blob.size;
+        			URL.revokeObjectURL(current);
+        			current = URL.createObjectURL(blob);
+        			return current;
+        		}
+        	}
+        	{
+        		let current = "";
+        		var toURLz = function(svgz){
+        			var blob = new Blob([svgz], {type: "image/svg+xml"});
+        			bytesz.value = blob.size;
+        			URL.revokeObjectURL(current);
+        			current = URL.createObjectURL(blob);
+        			return current;
+        		}
+        	}
+        	//UI
+        	//trap events on converting.
+        	{
+        		var busy = function(state){
+        			progress.value = 0;
+        			cover.style.display = state ? "block": "none";
+        		};
+        		var isBusy = function(){
+        			return cover.style.display == "block";
+        		};
+        	}
+        	//load image.
+        	{
+//        		fileInput.addEventListener("change", function(e){
+//        			if(isBusy()){return;}
+//        			var file = this.files[0];
+//              if(!file || file.type.indexOf("image")<0){return;}
+//              display(file);
+//        		});
+        		source.addEventListener("dragover", function(e){
+        			e.preventDefault();
+        		});
+        		source.addEventListener("drop", function(e){
+        			if(isBusy()){return;}
+        			e.stopPropagation();
+        			e.preventDefault();
+        			var file = e.dataTransfer.files[0];
+              if(!file || file.type.indexOf("image")<0){return;}
+              display(file);
+        		});
+        		source.addEventListener("load", function(e){
+        			busy(false);
+        		});
+        		source.addEventListener("error", function(e){
+        			this.removeAttribute("src");
+        			busy(false);
+        		});
+        		let display = function(file){
+        			obytes.value = file.size;
+        			URL.revokeObjectURL(source.src);
+        			busy(true);
+        			source.src = URL.createObjectURL(file);
+        		};
+        	}
+        	//begin convert
+        	{
+        		let canvas = document.createElement("canvas");
+        		let ctx = canvas.getContext("2d");
+        		let worker;
+        		let initWorker = function(){
+        			if(worker){return;}
+        			worker = new Worker("./lib/img2svg3worker.js");
+        			worker.addEventListener("message", function(e){
+        				if(e.data.total){
+        					progress.value = e.data.progress/e.data.total;
+        				}
+        			});
+        		}
+        		btnStop.onclick = function(){
+        			worker.terminate();
+        			worker = undefined;
+        			busy(false);
+        		}
+        		btnExec.onclick = function(e){
+                    console.log("btnExec.onclick init");
+        			if(isBusy()){return;}
+        			if(source.src == ""){return;}
+        			if(source.naturalWidth * source.naturalHeight > 600 * 600 || selSteps.value > 12){
+        				if(!confirm("処理に時間がかかるかもしれませんが, よろしいですか?")){
+        					return;
+        				}
+        			}
+        			busy(true);
+        			initWorker();
+                    console.log("initWorker init");
+        			new Promise(function(resolve, reject){
+        				canvas.width = source.naturalWidth;
+        				canvas.height = source.naturalHeight;
+                        console.log("source width:"+ canvas.width);
+        				ctx.drawImage(source, 0, 0);
+        				var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        				worker.onmessage = function(e){
+        					if(e.data.svgSource){
+                                console.log("worker resolve start:");
+        						resolve(e.data);
+                                console.log("worker resolve end:");
+        					}else if(e.data.error){
+                                console.log("worker reject start:");
+        						reject(e.data.error);
+                                console.log("worker reject end:");
+        					}
+                            console.log("worker end:");
+        				}
+        				worker.postMessage({
+        					data: data,
+        					width: canvas.width,
+        					height: canvas.height,
+        					steps: selSteps.value,
+        					params: {
+        						turdSize: turdSize.value,
+        						precision: selPrecision.value,
+        						noFilter: true,
+        						isRelative: true
+        					},
+        					gray: gray.checked,
+        					responsive: responsive.checked,
+        					weight: weight.checked,
+        					useFilter: useFilter.checked,
+        					curve: curve.value,
+        					scale: scale.value,
+        					svgz: needsvgz.checked
+        				}, [data.buffer]);
+        			}).then(function(data){
+        				var objURL = toURL(data.svgSource);
+        				if(isFF){
+        					out.src = "data:image/svg+xml;charset=utf-8," 
+        						+ encodeURIComponent(data.svgSource);
+        					downloadlink.href = objURL;
+        				}else{
+        					out.src = downloadlink.href = view.href = objURL;
+        				}
+        				if(data.svgz){
+        					downloadlinkz.href = toURLz(data.svgz);
+        				}
+        				busy(false);
+        				return;
+        			}).catch(function(error){
+        				alert("正常終了しませんでした." + error);
+        				busy(false);
+        			});
+        		};
+        	}
         });
             
         var convert = function(fn) {
@@ -91,6 +255,8 @@
                 // キャンバスのコンテキストの取得
                 var canvas = document.createElement('canvas');
                 var context = canvas.getContext('2d');
+                
+                //var canvas = new fabric.Canvas('myCanvas');
                 
                 // キャンバスの描画サーフェイスのサイズを設定
                 $(canvas).attr({
@@ -102,24 +268,24 @@
                 context.drawImage(photoImage, 0, 0, photoImage.width, photoImage.height);
                 
                 // 写真のイメージデータを全部取得する
-                var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                
+//                var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
                 // イメージのカラーピクセルの入った配列
-                var dataArray = imageData.data;
+//                var dataArray = imageData.data;
                 
                 // 1ピクセルめのカラー  [ r1, g1, b1, a1,
                 // 2ピクセルめのカラー    r2, g2, b2, a2,
                 //                        ...]
         
-                try{
-                    // 画像データを加工する
-                    imageData.dataArray = fn(dataArray);
-                } catch (e) {
-                    alert('Error: ' + e);
-                }
+//                try{
+//                    // 画像データを加工する
+//                    imageData.dataArray = fn(dataArray);
+//                } catch (e) {
+//                    alert('Error: ' + e);
+//                }
                 
                 // イメージデータを戻す
-                context.putImageData(imageData, 0, 0);
+                //context.putImageData(imageData, 0, 0);
                 
                 return canvas;
             };
@@ -224,8 +390,114 @@
                 </div>
                 <div class="center">画像</div>
             </ons-toolbar>
-            <ons-carousel var="imageCarousel" class="image-carousel" fullscreen auto-scroll overscrollable>
+            <!--<ons-carousel var="imageCarousel" class="image-carousel" fullscreen auto-scroll overscrollable>
+            </ons-carousel>-->
+            <!--<ons-carousel var="imageCarousel" class="image-carousel">-->
             </ons-carousel>
+            <!--<canvas id="myCanvas"></canvas>-->
+            <div auto-scroll >
+                <fieldset>
+            		<legend>入力画像</legend>
+            		<div class="container">
+                		<!--<img title="画像をドロップできます. " id="source">-->
+                        <ons-carousel var="imageCarousel" class="image-carousel">
+            		</div>
+            		<!--<div>
+            			<label>
+            				<input type="file" id="fileInput" title="変換対象の画像ファイル.">
+            			</label>
+            			<label>
+            				<input id="obytes" readonly="true">bytes
+            			</label>
+            		</div>-->
+            		<div>
+            			<label title="色味毎の階調数. 増やすと品質が改善するが, ファイルサイズ・UAの描画負荷が高まります. 
+            画像サイズにもよるが実用上は8, 多くても10が限界.">階調:
+            				<select id="selSteps">
+            					<option value="2">2</option>
+            					<option value="3">3</option>
+            					<option value="4" selected="selected">4</option>
+            					<option value="5">5</option>
+            					<option value="6">6</option>
+            					<option value="7">7</option>
+            					<option value="8">8</option>
+            					<option value="9">9</option>
+            					<option value="10">10</option>
+            					<option value="11">11</option>
+            					<option value="12">12</option>
+            					<option value="13">13</option>
+            					<option value="14">14</option>
+            					<option value="15">15</option>
+            					<option value="16">16</option>
+            				</select>
+            			</label>
+            			<label title="1で等分. 1未満で明部優先, 1超過で暗部優先. 
+            明るい(淡い)画像であれば少なめ(0.7程度)にすると出力結果が改善する(暗部が潰れる). 
+            濃い部分のみを残すのであれば値を大きく取る.
+            いろいろ試行錯誤が必要.">a<sup>x</sup>:
+            				<input type="number" id="curve" value="1" min="0.1" max="10" step="0.1">
+            			</label>
+            			<label title="グレイスケールで出力する.">gray:
+            				<input type="checkbox" id="gray">
+            			</label>
+            			<label title="赤と緑に重み付け(倍階調)をする.">+rg:
+            				<input type="checkbox" id="weight">
+            			</label>
+            			<label title="倍率.">scale:
+            				<input type="number" id="scale" min="1" max="10" value="1" step="0.1">
+            			</label>
+            			<label title="responsive.SVGのサイズを可変とする.">resopnsive:
+            				<input type="checkbox" id="responsive">
+            			</label>
+            			<label title="パスの精度(小数点桁数). 少ないほどファイルサイズが小さくなる. 1で十分.">精度:
+            				<select id="selPrecision">
+            					<option value="0">0</option>
+            					<option value="1" selected="selected">1</option>
+            					<option value="2">2</option>
+            					<option value="3">3</option>
+            				</select>
+            			</label>
+            			<label title="大きいほどごみが除去されファイルサイズが小さくなるが細部が潰れる.">ノイズ除去:
+            				<input type="number" id="turdSize" min="0" max="100" step="1" value="1">
+            			</label>
+            			<label title="mix-blend-modeを使わずにfilterを用いる.
+            より広範な環境で動作するようになるが, Firefoxでのみ動作しない! なんて事だ!">use filter:
+            				<input type="checkbox" id="useFilter">
+            			</label><input type="button" id="btnExec" value="実行" title="処理を開始します">
+            		</div>
+            	</fieldset>
+            	<fieldset>
+            		<legend>出力画像</legend>
+            		<div class="container">
+            			<a id="view" target="_blank">
+            				<img title="変換結果を出力しています. " id="out">
+            			</a>
+            		</div>
+            		<div>
+            			<table>
+            			<tbody>
+            			<tr>
+            				<td><a id="downloadlink" download="result.svg" target="_blank">[SVGをダウンロードする]</a></td><td><input id="bytes" readonly="true">bytes</td>
+            			</tr>
+            			<tr>
+            				<td><a id="downloadlinkz" download="result.svgz" target="_blank">[SVGZをダウンロードする]</a></td><td><input id="bytesz" readonly="true">bytes<input type="checkbox" id="needsvgz" title="svgz形式での出力が必要な場合チェックを入れる. (重い)"></td>
+            			</tr>
+            			</tbody>
+            			</table>
+            		</div>
+            	</fieldset>
+            	<div id="cover" style="display: none;">
+            		<svg width="300" height="300" viewBox="0 0 200 200">
+            			<g>
+            				<circle fill="blue" opacity="0.5" r="100" cx="100" cy="100"></circle>
+            				<image x="0" y="0" height="200" width="200" xlink:href="../img2svg/nc1123.png"></image>
+            				<text id="svgTxt" x="100" y="115" fill="black" font-size="18" text-anchor="middle" transform="translate(100,115),skewY(10),translate(-100,-115)">処理中</text>
+            			</g>
+            		</svg>
+            		<progress id="progress" value="0"></progress>
+            		<input type="button" value="中止" id="btnStop">
+            	</div>
+            </div>
         </ons-page>
     </ons-template>
 </body>
