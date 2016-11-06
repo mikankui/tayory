@@ -176,7 +176,7 @@ Potrace = (function(){
 		var pt = new Point();
 
 		var rect = new Rectangle();
-		for(let i=0; i<len; i=(i+1)|0){
+		for(var i=0; i<len; i=(i+1)|0){
 			let x = priv[i].x;
 			let y = priv[i].y;
 

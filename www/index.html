@@ -69,8 +69,18 @@
         			var blob = new Blob([svgsrc], {type: "image/svg+xml"});
         			bytes.value = blob.size;
         			URL.revokeObjectURL(current);
+                    console.log(blob);
         			current = URL.createObjectURL(blob);
+                    console.log(current);
         			return current;
+                        //var svg = svgsrc.filter('svg') || svgsrc.find('svg');
+//                        svgsrc.attr({
+//                            "xmlns" : "http://www.w3.org/2000/svg",
+//                        });
+//                        return 'data:image/svg+xml;base64,'  + 
+//                            btoa(svgsrc.parent().html().replace(/[^\x00-\x7f]/g, function(x){
+//                                    return "&#" + x.charCodeAt(0) + ";"
+//                            }), true);
         		}
         	}
         	{
@@ -112,7 +122,9 @@
         			if(worker){return;}
         			worker = new Worker("./lib/img2svg3worker.js");
         			worker.addEventListener("message", function(e){
+                        console.log("data totale"+e.data.total);
         				if(e.data.total){
+                            console.log("data progress"+e.data.progress);
         					progress.value = e.data.progress/e.data.total;
         				}
         			});
@@ -134,6 +146,15 @@
                         var ctx = reCanvas.getContext('2d');
                         var reImage = new Image();
                         reImage.onload = function(event){
+                            
+                            //リサイズのベースとする辺を設定
+                            if(this.width>this.height){
+                                baseLength=this.width;
+                            }else{
+                                baseLength=this.height;
+                            }
+                            scale=1200/baseLength;
+                            scale=0.1;
                             var dstWidth = this.width * scale;
                             var dstHeight = this.height * scale
                             reCanvas.width = dstWidth;
@@ -160,13 +181,17 @@
         				canvas.height = source.naturalHeight;
         				ctx.drawImage(source, 0, 0);
         				var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                        if (window.Worker) {
+                            console.log("このブラウザではWeb Workersは利用できます");
+                        } else {
+                            console.log("このブラウザではWeb Workersは利用できません");
+                        }
         				worker.onmessage = function(e){
         					if(e.data.svgSource){
         						resolve(e.data);
         					}else if(e.data.error){
         						reject(e.data.error);
         					}
-                            console.log("worker work...");
         				}
         				worker.postMessage({
         					data: data,
@@ -187,13 +212,20 @@
         					scale: scale.value,
         					svgz: needsvgz.checked
         				}, [data.buffer]);
+                        worker.onerror = function(e) {
+                            console.log("worker error"+e.message);
+                        }
         			}).then(function(data){
+                        console.log("then worker work...");
+                        //console.log(data.svgSource);
         				var objURL = toURL(data.svgSource);
+                        
         				if(isFF){
         					out.src = "data:image/svg+xml;charset=utf-8," 
         						+ encodeURIComponent(data.svgSource);
         					downloadlink.href = objURL;
         				}else{
+                            console.log("else "+objURL);
         					out.src = downloadlink.href = view.href = objURL;
         				}
         				if(data.svgz){
@@ -290,9 +322,9 @@
             			<label title="色味毎の階調数. 増やすと品質が改善するが, ファイルサイズ・UAの描画負荷が高まります. 
             画像サイズにもよるが実用上は8, 多くても10が限界.">階調:
             				<select id="selSteps">
-            					<option value="2">2</option>
+            					<option value="2" selected="selected">2</option>
             					<option value="3">3</option>
-            					<option value="4" selected="selected">4</option>
+            					<option value="4">4</option>
             					<option value="5">5</option>
             					<option value="6">6</option>
             					<option value="7">7</option>

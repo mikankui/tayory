@@ -3,8 +3,9 @@ importScripts("domlike.js", "potrace.js", "gzip.min.js");
 //importScripts("domlike.js", "potrace.js");
 {
 	{
-		let encoder = new TextEncoder("utf-8");
+		//let encoder = new TextEncoder("utf-8");
 		self.onmessage = function(e){
+            console.log("start worker");
 			var d = e.data;
 			try{
 				var svg = convertToSVG(
@@ -12,8 +13,9 @@ importScripts("domlike.js", "potrace.js", "gzip.min.js");
 					d.steps, d.params, d.gray, d.responsive, 
 					d.weight, d.useFilter, d.curve, d.scale);
 				if(d.svgz){
-					let gzip = new Zlib.Gzip(encoder.encode(svg));
-					var compressed = gzip.compress();
+					//let gzip = new Zlib.Gzip(encoder.encode(svg));
+					//var compressed = gzip.compress();
+                    var compressed;
 				}
 				self.postMessage(
 					{svgSource: svg, svgz: compressed},
