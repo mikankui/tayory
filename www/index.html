@@ -122,8 +122,30 @@
         			worker = undefined;
         			busy(false);
         		}
+                btnResize.onclick = function(e){
+            		if(isBusy()){return;}
+        			if(source.src == ""){return;}
+            		if(source.naturalWidth * source.naturalHeight < 600 * 600 || selSteps.value < 12){
+        				if(!confirm("今のサイズでも処理に時間は掛からないかもしれませんが, よろしいですか?")){
+        					return;
+        				}
+                        var scale = 0.5; // 縦横を50%縮小
+                        var reCanvas = document.createElement('canvas');
+                        var ctx = reCanvas.getContext('2d');
+                        var reImage = new Image();
+                        reImage.onload = function(event){
+                            var dstWidth = this.width * scale;
+                            var dstHeight = this.height * scale
+                            reCanvas.width = dstWidth;
+                            reCanvas.height = dstHeight;
+                            console.log("w:"+dstWidth+" h:"+dstHeight)
+                            ctx.drawImage(this, 0, 0, this.width, this.height, 0, 0, dstWidth, dstHeight);
+                            source.src=reCanvas.toDataURL();
+                        }
+                        reImage.src = source.src; // 元画像
+        			}
+                }
         		btnExec.onclick = function(e){
-                    console.log("btnExec.onclick init");
         			if(isBusy()){return;}
         			if(source.src == ""){return;}
         			if(source.naturalWidth * source.naturalHeight > 600 * 600 || selSteps.value > 12){
@@ -133,24 +155,18 @@
         			}
         			busy(true);
         			initWorker();
-                    console.log("initWorker init");
         			new Promise(function(resolve, reject){
         				canvas.width = source.naturalWidth;
         				canvas.height = source.naturalHeight;
-                        console.log("source width:"+ canvas.width);
         				ctx.drawImage(source, 0, 0);
         				var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         				worker.onmessage = function(e){
         					if(e.data.svgSource){
-                                console.log("worker resolve start:");
         						resolve(e.data);
-                                console.log("worker resolve end:");
         					}else if(e.data.error){
-                                console.log("worker reject start:");
         						reject(e.data.error);
-                                console.log("worker reject end:");
         					}
-                            console.log("worker end:");
+                            console.log("worker work...");
         				}
         				worker.postMessage({
         					data: data,
@@ -323,7 +339,9 @@
             			<label title="mix-blend-modeを使わずにfilterを用いる.
             より広範な環境で動作するようになるが, Firefoxでのみ動作しない! なんて事だ!">use filter:
             				<input type="checkbox" id="useFilter">
-            			</label><input type="button" id="btnExec" value="実行" title="処理を開始します">
+            			</label>
+                        <input type="button" id="btnExec" value="実行" title="処理を開始します">
+                        <input type="button" id="btnResize" value="リサイズ" title="画像サイズを半分にします">
             		</div>
             	</fieldset>
             	<fieldset>
