@@ -13,7 +13,6 @@
             max-width: 100%;
         }
         .converted-image-label-wrapper {
-            position: absolute;
             width: 100%;
             text-align: center;
             bottom: 60px;
@@ -40,7 +39,7 @@
             ons.createAlertDialog('loading.html');
             
             var onSuccess = function(pictureUrl) {
-                loading.show();
+//                loading.show();
 
                 images = [];
                 var $img = $('<img id="source">');
@@ -59,7 +58,7 @@
 //                      element: toInverse(this),
 //                      label: 'ネガポジ変換'
 //                  });
-                  loading.hide();
+//                  loading.hide();
                   myNavi.pushPage('image.html');
                 });
             }
@@ -74,10 +73,11 @@
         
         $(document).on('pageinit', '#image-page', function() {
             images.map(function(image) {
-                var element = $('<ons-carousel-item><div class="converted-image-label-wrapper"><div class="converted-image-label"></div></div></ons-carousel-item>');
+                //var element = $('<ons-carousel-item><div class="converted-image-label-wrapper"><div class="converted-image-label"></div></div></ons-carousel-item>');
+                var element = $('<ons-carousel-item></ons-carousel-item>');
                 $(image.element).addClass('converted-image');
                 element.prepend(image.element);
-                element.find('.converted-image-label').text(image.label);
+                //element.find('.converted-image-label').text(image.label);
                 
                 return element[0];
             }).forEach(function(element) {
@@ -256,8 +256,6 @@
                 var canvas = document.createElement('canvas');
                 var context = canvas.getContext('2d');
                 
-                //var canvas = new fabric.Canvas('myCanvas');
-                
                 // キャンバスの描画サーフェイスのサイズを設定
                 $(canvas).attr({
                     width: photoImage.width,
@@ -268,7 +266,7 @@
                 context.drawImage(photoImage, 0, 0, photoImage.width, photoImage.height);
                 
                 // 写真のイメージデータを全部取得する
-//                var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
                 // イメージのカラーピクセルの入った配列
 //                var dataArray = imageData.data;
@@ -285,38 +283,38 @@
 //                }
                 
                 // イメージデータを戻す
-                //context.putImageData(imageData, 0, 0);
+                context.putImageData(imageData, 0, 0);
                 
                 return canvas;
             };
         };
             
-        var toMonochrome = convert(function(dataArray) {
-            var len = dataArray.length;
-                
-            // モノクロに変換
-            for (var i = 0; i < len; i += 4) {
-                var average = (dataArray[i] + dataArray[i + 1] + dataArray[i + 2]) * 0.3333;
-                dataArray[i] = average;
-                dataArray[i + 1] = average;
-                dataArray[i + 2] = average;
-            }
-            
-            return dataArray;
-        });
-        
-        var toInverse = convert(function(dataArray) {
-            var len = dataArray.length;
-                
-            // ネガポジ変換
-            for (var i = 0; i < len; i += 4) {
-                dataArray[i]= -dataArray[i] + 255;
-                dataArray[i + 1]= -dataArray[i + 1] + 255;
-                dataArray[i + 2]= -dataArray[i + 2] + 255;
-            }
-            
-            return dataArray;
-        });
+//        var toMonochrome = convert(function(dataArray) {
+//            var len = dataArray.length;
+//                
+//            // モノクロに変換
+//            for (var i = 0; i < len; i += 4) {
+//                var average = (dataArray[i] + dataArray[i + 1] + dataArray[i + 2]) * 0.3333;
+//                dataArray[i] = average;
+//                dataArray[i + 1] = average;
+//                dataArray[i + 2] = average;
+//            }
+//            
+//            return dataArray;
+//        });
+//        
+//        var toInverse = convert(function(dataArray) {
+//            var len = dataArray.length;
+//                
+//            // ネガポジ変換
+//            for (var i = 0; i < len; i += 4) {
+//                dataArray[i]= -dataArray[i] + 255;
+//                dataArray[i + 1]= -dataArray[i + 1] + 255;
+//                dataArray[i + 2]= -dataArray[i + 2] + 255;
+//            }
+//            
+//            return dataArray;
+//        });
             
         // ギャラリーから画像のパスを取得する
         var getPictureFromGallery = function(onSuccess) {
@@ -395,12 +393,12 @@
             <!--<ons-carousel var="imageCarousel" class="image-carousel">-->
             </ons-carousel>
             <!--<canvas id="myCanvas"></canvas>-->
-            <div auto-scroll >
+            <div>
                 <fieldset>
             		<legend>入力画像</legend>
-            		<div class="container">
+            		<div class="container" id="inputSourceArea" heigth="100%">
                 		<!--<img title="画像をドロップできます. " id="source">-->
-                        <ons-carousel var="imageCarousel" class="image-carousel">
+                        <ons-carousel var="imageCarousel" class="image-carousel"  auto-scroll overscrollable></ons-carousel>
             		</div>
             		<!--<div>
             			<label>
@@ -470,7 +468,7 @@
             		<legend>出力画像</legend>
             		<div class="container">
             			<a id="view" target="_blank">
-            				<img title="変換結果を出力しています. " id="out">
+            				<img title="変換結果を出力しています. " id="out" class="converted-image">
             			</a>
             		</div>
             		<div>
